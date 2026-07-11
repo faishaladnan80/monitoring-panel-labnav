@@ -276,7 +276,7 @@
             element.classList.add('active');
         }
 
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8000), "web_client_" + Math.random().toString(16).substr(2, 8));
+        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_client_" + Math.random().toString(16).substr(2, 8));
 
         client.onConnectionLost = function(responseObject) {
             const statusBadge = document.getElementById("status");
@@ -455,6 +455,8 @@
 
         function Hubungkan() {
             client.connect({
+                useSSL: true, // WAJIB AKTIF: Menggunakan enkripsi SSL/TLS agar diizinkan oleh HTTPS GitHub Pages
+                timeout: 3,
                 onSuccess: function() {
                     const statusBadge = document.getElementById("status");
                     statusBadge.innerText = "● Connected Cloud";
