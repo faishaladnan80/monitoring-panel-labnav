@@ -325,21 +325,21 @@
                                 <div class="bg-light p-2 rounded-3 text-center border">
                                     <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">RMSE</small>
                                     <span id="lstm_rmse" class="fw-bold text-dark fs-6">0.000000</span>
-                                    <small class="text-muted d-block micro-text">kWh</small>
+                                    <small class="text-muted d-block micro-text" style="font-size: 0.65rem;">kWh</small>
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div class="bg-light p-2 rounded-3 text-center border">
                                     <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MAE</small>
                                     <span id="lstm_mae" class="fw-bold text-dark fs-6">0.000000</span>
-                                    <small class="text-muted d-block micro-text">kWh</small>
+                                    <small class="text-muted d-block micro-text" style="font-size: 0.65rem;">kWh</small>
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div class="bg-light p-2 rounded-3 text-center border">
                                     <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MAPE</small>
                                     <span id="lstm_mape" class="fw-bold text-dark fs-6">0.00</span>
-                                    <small class="text-muted d-block micro-text">%</small>
+                                    <small class="text-muted d-block micro-text" style="font-size: 0.65rem;">%</small>
                                 </div>
                             </div>
                         </div>
@@ -392,7 +392,7 @@
 
             // Tutup menu hamburger di HP setelah tombol diklik
             const topNavCollapse = document.getElementById('topNavMenu');
-            if (topNavCollapse.classList.contains('show')) {
+            if (topNavCollapse && topNavCollapse.classList.contains('show')) {
                 const bsCollapse = new bootstrap.Collapse(topNavCollapse);
                 bsCollapse.hide();
             }
@@ -419,6 +419,7 @@
         };
 
         client.onMessageArrived = function(message) {
+            // 1. Dapatkan data Telemetri 3 Fasa
             if (message.destinationName === "panel/lab/data_3fasa") {
                 const data = JSON.parse(message.payloadString);
 
@@ -476,7 +477,7 @@
                 if(data.v2 > 100.0) {
                     document.getElementById("btn_ssr2_on").className = "btn btn-success btn-sm btn-action shadow-sm";
                     document.getElementById("btn_ssr2_off").className = "btn btn-outline-danger btn-sm btn-action me-1 shadow-sm";
-                } else {
+                } else { 
                     document.getElementById("btn_ssr2_on").className = "btn btn-outline-success btn-action shadow-sm";
                     document.getElementById("btn_ssr2_off").className = "btn btn-danger btn-sm btn-action me-1 shadow-sm";
                 }
@@ -484,28 +485,26 @@
                 if(data.v3 > 100.0) {
                     document.getElementById("btn_ssr3_on").className = "btn btn-success btn-sm btn-action shadow-sm";
                     document.getElementById("btn_ssr3_off").className = "btn btn-outline-danger btn-action me-1 shadow-sm";
-                } else {
+                } else { 
                     document.getElementById("btn_ssr3_on").className = "btn btn-outline-success btn-action shadow-sm";
                     document.getElementById("btn_ssr3_off").className = "btn btn-danger btn-sm btn-action me-1 shadow-sm";
                 }
             }
 
-            if (message.destinationName === "panel/lab/kontrol_lstm" && message.payloadString === "TRAINING_SELESAI") {
-                document.getElementById("btnRetrain").disabled = false;
-                document.getElementById("btnRetrain").className = "btn btn-success shadow w-100 fw-bold py-3 fs-6 mb-4 rounded-3";
-                
-                const statusLstm = document.getElementById("statusLSTM");
-                statusLstm.innerText = "Model LSTM Berhasil Diperbarui!";
-                statusLstm.className = "text-success fs-6";
-                alert("Proses Training Ulang Deep Learning LSTM Berhasil!");
-            }
+            // 2. Dapatkan Hasil Evaluasi LSTM dari VS Code via MQTT
             if (message.destinationName === "panel/lab/hasil_lstm") {
                 const res = JSON.parse(message.payloadString);
                 
                 // Update Tampilan Angka RMSE, MAE, MAPE
-                document.getElementById("lstm_rmse").innerText = parseFloat(res.rmse).toFixed(6);
-                document.getElementById("lstm_mae").innerText = parseFloat(res.mae).toFixed(6);
-                document.getElementById("lstm_mape").innerText = parseFloat(res.mape).toFixed(2);
+                if(document.getElementById("lstm_rmse")) {
+                    document.getElementById("lstm_rmse").innerText = parseFloat(res.rmse).toFixed(6);
+                }
+                if(document.getElementById("lstm_mae")) {
+                    document.getElementById("lstm_mae").innerText = parseFloat(res.mae).toFixed(6);
+                }
+                if(document.getElementById("lstm_mape")) {
+                    document.getElementById("lstm_mape").innerText = parseFloat(res.mape).toFixed(2);
+                }
                 
                 // Reset Tombol & Status Text
                 document.getElementById("btnRetrain").disabled = false;
@@ -524,7 +523,7 @@
             document.getElementById("btnRetrain").className = "btn btn-secondary w-100 py-3 fs-6 mb-4 rounded-3";
             
             const statusLstm = document.getElementById("statusLSTM");
-            statusLstm.innerText = "Komputasi Dataset...";
+            statusLstm.innerText = "Komputasi Dataset... (Harap Tunggu)";
             statusLstm.className = "text-warning fs-6";
             
             var message = new Paho.MQTT.Message("START_TRAINING");
@@ -598,7 +597,7 @@
                     updateStatusUI("● Connected Cloud", "bg-success text-white");
                     client.subscribe("panel/lab/data_3fasa");
                     client.subscribe("panel/lab/kontrol_lstm");
-                    client.subscribe("panel/lab/hasil_lstm"); // Subscribe Hasil
+                    client.subscribe("panel/lab/hasil_lstm"); // Subscribe Hasil Evaluasi dari VS Code
                 },
                 onFailure: function(message) {
                     updateStatusUI("Gagal Konek!", "bg-warning text-dark");
