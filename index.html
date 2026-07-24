@@ -313,11 +313,36 @@
                     <div class="card p-4 p-md-5 shadow-sm border-0 bg-white rounded-4">
                         <i class="fa-solid fa-microchip text-primary display-4 mb-3"></i>
                         <h5 class="fw-bold text-dark mb-2 fs-5">On-Demand Adaptive Retraining Model</h5>
-                        <p class="text-muted small mb-4">Perbarui bobot komputasi jaringan saraf tiruan Long Short-Term Memory secara terintegrasi dengan Google Drive / Sheets log dataset.</p>
+                        <p class="text-muted small mb-4">Perbarui bobot komputasi jaringan saraf tiruan Long Short-Term Memory secara langsung dari Google Sheets.</p>
                         
                         <button id="btnRetrain" class="btn btn-success shadow w-100 fw-bold py-3 fs-6 mb-4 rounded-3" onclick="pemicuTrainingLSTM()">
                             <i class="fa-solid fa-arrows-rotate me-2"></i>Mulai Proses Retraining Model LSTM
                         </button>
+
+                        <!-- DISPLAY METRIK EVALUASI DARI VS CODE -->
+                        <div class="row g-2 mb-4">
+                            <div class="col-4">
+                                <div class="bg-light p-2 rounded-3 text-center border">
+                                    <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">RMSE</small>
+                                    <span id="lstm_rmse" class="fw-bold text-dark fs-6">0.000000</span>
+                                    <small class="text-muted d-block micro-text">kWh</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="bg-light p-2 rounded-3 text-center border">
+                                    <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MAE</small>
+                                    <span id="lstm_mae" class="fw-bold text-dark fs-6">0.000000</span>
+                                    <small class="text-muted d-block micro-text">kWh</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="bg-light p-2 rounded-3 text-center border">
+                                    <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MAPE</small>
+                                    <span id="lstm_mape" class="fw-bold text-dark fs-6">0.00</span>
+                                    <small class="text-muted d-block micro-text">%</small>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="alert alert-light border p-3 d-flex align-items-center justify-content-center rounded-3" role="alert">
                             <i class="fa-solid fa-circle-check text-success fs-4 me-3"></i>
@@ -474,6 +499,24 @@
                 statusLstm.className = "text-success fs-6";
                 alert("Proses Training Ulang Deep Learning LSTM Berhasil!");
             }
+            if (message.destinationName === "panel/lab/hasil_lstm") {
+                const res = JSON.parse(message.payloadString);
+                
+                // Update Tampilan Angka Metrik
+                document.getElementById("lstm_rmse").innerText = res.rmse;
+                document.getElementById("lstm_mae").innerText = res.mae;
+                document.getElementById("lstm_mape").innerText = res.mape;
+                
+                // Kembalikan Status Tombol
+                document.getElementById("btnRetrain").disabled = false;
+                document.getElementById("btnRetrain").className = "btn btn-success shadow w-100 fw-bold py-3 fs-6 mb-4 rounded-3";
+                
+                const statusLstm = document.getElementById("statusLSTM");
+                statusLstm.innerText = "Model Baru Berhasil Diperbarui & Disimpan!";
+                statusLstm.className = "text-success fs-6";
+                
+                alert("⚡ Retraining LSTM Selesai!\nNilai RMSE, MAE, dan MAPE terbaru telah diperbarui di dashboard.");
+            }
         };
 
         function pemicuTrainingLSTM() {
@@ -555,6 +598,7 @@
                     updateStatusUI("● Connected Cloud", "bg-success text-white");
                     client.subscribe("panel/lab/data_3fasa");
                     client.subscribe("panel/lab/kontrol_lstm");
+                    client.subscribe("panel/lab/hasil_lstm"); // Subscribe Hasil
                 },
                 onFailure: function(message) {
                     updateStatusUI("Gagal Konek!", "bg-warning text-dark");
