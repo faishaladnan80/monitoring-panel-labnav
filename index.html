@@ -33,7 +33,7 @@
             letter-spacing: 0.3px;
             color: #ffffff;
             font-size: 1rem;
-            white-space: nowrap; /* Cegah teks NAV-LAB PANEL terlipat 2 baris */
+            white-space: nowrap;
         }
 
         /* NAV TAB BUTTONS */
@@ -105,19 +105,19 @@
 <body>
 
     <!-- ========================================== -->
-    <!-- TOP NAVBAR MODERN (PRESISI MURNI HANYA 1 BARIS) -->
+    <!-- TOP NAVBAR MODERN                          -->
     <!-- ========================================== -->
     <nav class="navbar navbar-expand-lg navbar-dark top-navbar sticky-top">
         <div class="container-fluid p-0 d-flex justify-content-between align-items-center flex-nowrap">
             
-            <!-- SIS KIRI: BRAND TITLE -->
+            <!-- SISI KIRI: BRAND TITLE -->
             <div class="d-flex align-items-center">
                 <span class="brand-title me-2">
                     <i class="fa-solid fa-square-poll-vertical me-2 text-primary"></i>NAV-LAB PANEL
                 </span>
             </div>
 
-            <!-- SISI KANAN: BADGE KONEKSI & TOMBOL HAMBURGER (SEJAJAR HORIZONTAL) -->
+            <!-- SISI KANAN: BADGE KONEKSI & TOMBOL HAMBURGER -->
             <div class="d-flex align-items-center gap-2">
                 <span id="status" class="badge bg-warning text-dark status-badge">
                     <i class="fa-solid fa-circle-nodes me-1"></i>Connecting...
@@ -127,7 +127,7 @@
                 </button>
             </div>
 
-            <!-- MENU TAB NAVBAR (SAAT DIBUKA / MENU HAMBURGER) -->
+            <!-- MENU TAB NAVBAR -->
             <div class="collapse navbar-collapse w-100 position-absolute top-100 start-0 bg-dark p-3 rounded-bottom shadow" id="topNavMenu" style="z-index: 1050;">
                 <ul class="nav nav-pills nav-pills-custom flex-column flex-lg-row gap-1 ms-auto">
                     <li class="nav-item">
@@ -379,7 +379,7 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC CORE (AUTO PORT DETECTION) -->
+    <!-- JAVASCRIPT LOGIC CORE -->
     <script>
         let perintahMenungguEksekusi = ""; 
 
@@ -390,7 +390,6 @@
             document.getElementById(menuId).classList.add('active');
             element.classList.add('active');
 
-            // Tutup menu hamburger di HP setelah tombol diklik
             const topNavCollapse = document.getElementById('topNavMenu');
             if (topNavCollapse && topNavCollapse.classList.contains('show')) {
                 const bsCollapse = new bootstrap.Collapse(topNavCollapse);
@@ -439,7 +438,7 @@
 
                 document.getElementById("v3").innerText = data.v3.toFixed(1);
                 document.getElementById("i3").innerText = data.i3.toFixed(2);
-                document.getElementById("p3").innerText = data.p3.toFixed(1);
+                document.getElementById("p3").innerText = data.p3.toFixed(1); // Perbaikan ID p3
                 document.getElementById("pf3").innerText = data.i3 == 0 ? "0.85" : data.pf3.toFixed(2);
 
                 if(data.v1 > 100.0) {
@@ -597,7 +596,7 @@
                     updateStatusUI("● Connected Cloud", "bg-success text-white");
                     client.subscribe("panel/lab/data_3fasa");
                     client.subscribe("panel/lab/kontrol_lstm");
-                    client.subscribe("panel/lab/hasil_lstm"); // Subscribe Hasil Evaluasi dari VS Code
+                    client.subscribe("panel/lab/hasil_lstm");
                 },
                 onFailure: function(message) {
                     updateStatusUI("Gagal Konek!", "bg-warning text-dark");
