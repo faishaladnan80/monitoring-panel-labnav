@@ -158,6 +158,21 @@
         
         <!-- MENU 1: REAL-TIME MONITORING 3 FASA -->
         <div id="menu-monitoring" class="page-section active">
+            
+            <!-- BANNER AKUMULASI TOTAL KWH SISTEM (3 FASA) -->
+            <div class="card bg-dark text-white p-3 rounded-4 shadow-sm mb-3 border-0">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-plug-circle-bolt text-warning display-6 me-3"></i>
+                        <div>
+                            <small class="text-uppercase font-monospace opacity-75" style="font-size: 0.7rem;">AKUMULASI ENERGI LAB (TOTAL 3 FASA):</small>
+                            <h3 class="m-0 fw-bold text-warning"><span id="total_kwh">0.0000</span> <small class="fs-6 text-white">kWh</small></h3>
+                        </div>
+                    </div>
+                    <span class="badge bg-outline-light border text-light font-monospace small"><i class="fa-solid fa-clock-rotate-left me-1"></i>Real-time Sensor Log</span>
+                </div>
+            </div>
+
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                 <div>
                     <h4 class="fw-bold text-dark m-0 fs-5"><i class="fa-solid fa-gauge-high me-2 text-primary"></i>Monitoring Parameter 3 Fasa</h4>
@@ -185,7 +200,7 @@
                             <div class="col-6 border-end pb-2"><small class="text-muted d-block mb-1">Tegangan</small><span class="val-display" id="v1">0</span><span class="unit"> V</span></div>
                             <div class="col-6 pb-2"><small class="text-muted d-block mb-1">Arus</small><span class="val-display text-primary" id="i1">0</span><span class="unit"> A</span></div>
                             <div class="col-6 border-end pt-2"><small class="text-muted d-block mb-1">Daya Aktif</small><span class="val-display" id="p1">0</span><span class="unit"> W</span></div>
-                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Power Factor</small><span class="val-display" id="pf1">0</span></div>
+                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Energi (kWh)</small><span class="val-display text-primary" id="e1">0.00</span><span class="unit"> kWh</span></div>
                         </div>
                     </div>
                 </div>
@@ -201,7 +216,7 @@
                             <div class="col-6 border-end pb-2"><small class="text-muted d-block mb-1">Tegangan</small><span class="val-display" id="v2">0</span><span class="unit"> V</span></div>
                             <div class="col-6 pb-2"><small class="text-muted d-block mb-1">Arus</small><span class="val-display text-warning" id="i2">0</span><span class="unit"> A</span></div>
                             <div class="col-6 border-end pt-2"><small class="text-muted d-block mb-1">Daya Aktif</small><span class="val-display" id="p2">0</span><span class="unit"> W</span></div>
-                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Power Factor</small><span class="val-display" id="pf2">0</span></div>
+                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Energi (kWh)</small><span class="val-display text-warning" id="e2">0.00</span><span class="unit"> kWh</span></div>
                         </div>
                     </div>
                 </div>
@@ -217,7 +232,7 @@
                             <div class="col-6 border-end pb-2"><small class="text-muted d-block mb-1">Tegangan</small><span class="val-display" id="v3">0</span><span class="unit"> V</span></div>
                             <div class="col-6 pb-2"><small class="text-muted d-block mb-1">Arus</small><span class="val-display text-success" id="i3">0</span><span class="unit"> A</span></div>
                             <div class="col-6 border-end pt-2"><small class="text-muted d-block mb-1">Daya Aktif</small><span class="val-display" id="p3">0</span><span class="unit"> W</span></div>
-                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Power Factor</small><span class="val-display" id="pf3">0</span></div>
+                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Energi (kWh)</small><span class="val-display text-success" id="e3">0.00</span><span class="unit"> kWh</span></div>
                         </div>
                     </div>
                 </div>
@@ -426,20 +441,32 @@
                     document.getElementById("suhu_panel").innerText = data.suhu.toFixed(1);
                 }
                 
+                // JALUR 1
                 document.getElementById("v1").innerText = data.v1.toFixed(1);
                 document.getElementById("i1").innerText = data.i1.toFixed(2);
                 document.getElementById("p1").innerText = data.p1.toFixed(1);
-                document.getElementById("pf1").innerText = data.i1 == 0 ? "0.85" : data.pf1.toFixed(2);
+                const e1_val = data.e1 !== undefined ? parseFloat(data.e1) : 0.0;
+                document.getElementById("e1").innerText = e1_val.toFixed(2);
 
+                // JALUR 2
                 document.getElementById("v2").innerText = data.v2.toFixed(1);
                 document.getElementById("i2").innerText = data.i2.toFixed(2);
                 document.getElementById("p2").innerText = data.p2.toFixed(1);
-                document.getElementById("pf2").innerText = data.i2 == 0 ? "0.85" : data.pf2.toFixed(2);
+                const e2_val = data.e2 !== undefined ? parseFloat(data.e2) : 0.0;
+                document.getElementById("e2").innerText = e2_val.toFixed(2);
 
+                // JALUR 3
                 document.getElementById("v3").innerText = data.v3.toFixed(1);
                 document.getElementById("i3").innerText = data.i3.toFixed(2);
-                document.getElementById("p3").innerText = data.p3.toFixed(1); // Perbaikan ID p3
-                document.getElementById("pf3").innerText = data.i3 == 0 ? "0.85" : data.pf3.toFixed(2);
+                document.getElementById("p3").innerText = data.p3.toFixed(1);
+                const e3_val = data.e3 !== undefined ? parseFloat(data.e3) : 0.0;
+                document.getElementById("e3").innerText = e3_val.toFixed(2);
+
+                // HITUNG TOTAL AKUMULASI KWH SISTEM (3 FASA)
+                const total_kwh_val = e1_val + e2_val + e3_val;
+                if(document.getElementById("total_kwh")) {
+                    document.getElementById("total_kwh").innerText = total_kwh_val.toFixed(4);
+                }
 
                 if(data.v1 > 100.0) {
                     document.getElementById("status_ssr1").innerText = "● SYSTEM ON";
