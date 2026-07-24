@@ -502,12 +502,12 @@
             if (message.destinationName === "panel/lab/hasil_lstm") {
                 const res = JSON.parse(message.payloadString);
                 
-                // Update Tampilan Angka Metrik
-                document.getElementById("lstm_rmse").innerText = res.rmse;
-                document.getElementById("lstm_mae").innerText = res.mae;
-                document.getElementById("lstm_mape").innerText = res.mape;
+                // Update Tampilan Angka RMSE, MAE, MAPE
+                document.getElementById("lstm_rmse").innerText = parseFloat(res.rmse).toFixed(6);
+                document.getElementById("lstm_mae").innerText = parseFloat(res.mae).toFixed(6);
+                document.getElementById("lstm_mape").innerText = parseFloat(res.mape).toFixed(2);
                 
-                // Kembalikan Status Tombol
+                // Reset Tombol & Status Text
                 document.getElementById("btnRetrain").disabled = false;
                 document.getElementById("btnRetrain").className = "btn btn-success shadow w-100 fw-bold py-3 fs-6 mb-4 rounded-3";
                 
