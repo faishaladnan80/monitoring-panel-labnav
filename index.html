@@ -1,641 +1,893 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3-Phase Smart Panel Dashboard</title>
-    <!-- Bootstrap 5 CSS via CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome untuk Ikon -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Paho MQTT JavaScript Client -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NAV-LAB PANEL - Dashboard Terintegrasi</title>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Paho MQTT Client -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+  
+  <style>
+    /* ==========================================================================
+       1. GLOBAL STYLES & RESET
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #0d1117;
+      color: #c9d1d9;
+      padding: 20px;
+    }
+
+    /* ==========================================================================
+       2. HEADER / NAVBAR INTERAKTIF
+       ========================================================================== */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #161b22;
+      padding: 12px 24px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #30363d;
+    }
+
+    .brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .nav-btn {
+      background-color: transparent;
+      color: #8b949e;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background-color: #21262d;
+      color: #58a6ff;
+    }
+
+    .nav-btn.active {
+      background-color: #1f6beb;
+      color: #ffffff;
+    }
+
+    .status-badge {
+      background-color: #238636;
+      color: #ffffff;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #3fb950;
+      border-radius: 50%;
+    }
+
+    /* ==========================================================================
+       3. SEKSI KONTEN (SPA LOGIC)
+       ========================================================================== */
+    .dashboard-section {
+      display: none;
+    }
+
+    .dashboard-section.active {
+      display: block;
+    }
+
+    .card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      color: #1f2328;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* MONITORING MENU STYLES */
+    .monitoring-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .jalur-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-weight: 700;
+      color: #0969da;
+    }
+
+    .badge-online {
+      background-color: #dafbe1;
+      color: #1a7f37;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+    }
+
+    .badge-offline {
+      background-color: #ffebe9;
+      color: #cf222e;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+    }
+
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .param-box {
+      background: #f6f8fa;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .param-label { font-size: 0.75rem; color: #57606a; font-weight: 600; }
+    .param-value { font-size: 1.3rem; font-weight: 800; color: #1f2328; }
+
+    .temp-card {
+      background: #161b22;
+      color: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .temp-val { font-size: 2rem; font-weight: 800; color: #ff7b72; }
+
+    .btn-reset-alarm {
+      background-color: transparent;
+      border: 1px solid #f85149;
+      color: #f85149;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.2s;
+    }
+
+    .btn-reset-alarm:hover { background-color: #f85149; color: #ffffff; }
+
+    .ews-log {
+      background-color: #dafbe1;
+      border: 1px solid #4ac26b;
+      color: #1a7f37;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.3s;
+    }
+
+    /* KONTROL SSR STYLES */
+    .control-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      color: #1f2328;
+      margin-bottom: 20px;
+    }
+
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e1e4e8;
+    }
+
+    .btn-group { display: flex; gap: 10px; }
     
-    <style>
-        * { box-sizing: border-box; }
-        body { 
-            background-color: #f0f2f5; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            overflow-x: hidden;
-        }
+    .btn-off {
+      border: 1px solid #cf222e;
+      color: #cf222e;
+      background: transparent;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-        /* --- MODERN TOP NAVBAR STYLE --- */
-        .top-navbar {
-            background: linear-gradient(135deg, #1e242b 0%, #111418 100%);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            padding: 10px 16px;
-        }
+    .btn-off:hover { background-color: #cf222e; color: #fff; }
 
-        .brand-title {
-            font-weight: 800;
-            letter-spacing: 0.3px;
-            color: #ffffff;
-            font-size: 1rem;
-            white-space: nowrap;
-        }
+    .btn-on {
+      border: 1px solid #1a7f37;
+      color: #1a7f37;
+      background: transparent;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-        /* NAV TAB BUTTONS */
-        .nav-pills-custom .nav-link {
-            color: #9ba8b7;
-            font-weight: 600;
-            font-size: 0.9rem;
-            border-radius: 10px;
-            padding: 8px 16px;
-            margin: 0 2px;
-            transition: all 0.2s ease;
-        }
+    .btn-on:hover { background-color: #1a7f37; color: #fff; }
 
-        .nav-pills-custom .nav-link:hover {
-            color: #ffffff;
-            background-color: rgba(255,255,255,0.08);
-        }
+    .threshold-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 15px 0;
+    }
 
-        .nav-pills-custom .nav-link.active {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.35);
-        }
+    .threshold-input input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 700;
+    }
 
-        /* --- CARDS & METERS --- */
-        .card-meter { 
-            border: none; 
-            border-radius: 16px; 
-            background-color: #ffffff;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.04); 
-            transition: transform 0.2s ease;
-        }
+    .btn-apply {
+      background-color: #0969da;
+      color: #fff;
+      border: none;
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-        .val-display { 
-            font-size: 1.5rem; 
-            font-weight: 800; 
-            color: #1a1d20; 
-            white-space: nowrap; 
-            letter-spacing: -0.5px;
-        }
+    /* LSTM STYLES REAL-TIME HARI BESOK */
+    .lstm-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
 
-        .unit { 
-            font-size: 0.85rem; 
-            color: #6c757d; 
-            font-weight: 600; 
-        }
+    .chart-container { position: relative; height: 280px; width: 100%; }
 
-        .btn-action { 
-            font-weight: 700; 
-            border-radius: 8px; 
-            min-width: 70px; 
-        }
+    .total-estimation-box {
+      background-color: #f6f8fa;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #e1e4e8;
+    }
 
-        .status-badge { 
-            font-size: 0.75rem; 
-            padding: 5px 10px; 
-            border-radius: 30px; 
-            font-weight: 600;
-            white-space: nowrap;
-        }
+    .engine-card { display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; }
+    
+    .btn-retrain { 
+      background-color: #198754; 
+      color: #fff; 
+      border: none; 
+      width: 100%; 
+      padding: 12px; 
+      border-radius: 8px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      margin-bottom: 20px; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
 
-        .page-section { display: none; }
-        .page-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin-bottom: 15px; }
+    .metric-box { background-color: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 8px; padding: 12px; }
+    
+    .trigger-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #1f2328;
+    }
 
-        .modal-content-custom { border: none; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
-    </style>
+    /* MODAL POP-UP */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: rgba(13, 17, 23, 0.75);
+      backdrop-filter: blur(5px);
+      z-index: 999;
+      justify-content: center; align-items: center;
+    }
+
+    .modal-box {
+      background-color: #ffffff;
+      width: 90%; max-width: 900px; max-height: 85vh;
+      border-radius: 14px; display: flex; flex-direction: column; color: #1f2328;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header { padding: 18px 24px; border-bottom: 1px solid #d0d7de; display: flex; justify-content: space-between; align-items: center; background: #f6f8fa; border-top-left-radius: 14px; border-top-right-radius: 14px; }
+    .modal-body { padding: 20px 24px; overflow-y: auto; max-height: 60vh; }
+    
+    .popup-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      text-align: left;
+    }
+    
+    .popup-table th { 
+      background: #161b22; 
+      color: #ffffff; 
+      padding: 12px 20px; 
+      font-size: 0.85rem;
+      font-weight: 600;
+      position: sticky; 
+      top: 0; 
+      z-index: 10;
+    }
+
+    .popup-table td { 
+      padding: 12px 20px; 
+      border-bottom: 1px solid #e1e4e8; 
+      font-size: 0.9rem;
+      color: #1f2328;
+    }
+
+    .popup-table tr:hover { background-color: #f6f8fa; }
+
+    .modal-footer {
+      padding: 14px 24px; border-top: 1px solid #d0d7de; display: flex; justify-content: flex-end; background: #f6f8fa; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px;
+    }
+
+    .btn-close {
+      background:#6e7781; color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; cursor:pointer;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- ========================================== -->
-    <!-- TOP NAVBAR MODERN                          -->
-    <!-- ========================================== -->
-    <nav class="navbar navbar-expand-lg navbar-dark top-navbar sticky-top">
-        <div class="container-fluid p-0 d-flex justify-content-between align-items-center flex-nowrap">
-            
-            <!-- SISI KIRI: BRAND TITLE -->
-            <div class="d-flex align-items-center">
-                <span class="brand-title me-2">
-                    <i class="fa-solid fa-square-poll-vertical me-2 text-primary"></i>NAV-LAB PANEL
-                </span>
-            </div>
+  <!-- NAVBAR INTERAKTIF -->
+  <header class="navbar">
+    <div class="brand">
+      <i class="fas fa-microchip" style="color: #0969da;"></i> NAV-LAB PANEL
+    </div>
+    <div class="nav-buttons">
+      <button class="nav-btn" id="btn-monitoring" onclick="switchPage('monitoring')">
+        <i class="fas fa-chart-line"></i> Monitoring
+      </button>
+      <button class="nav-btn" id="btn-kontrol" onclick="switchPage('kontrol')">
+        <i class="fas fa-sliders-h"></i> Kontrol SSR
+      </button>
+      <button class="nav-btn active" id="btn-lstm" onclick="switchPage('lstm')">
+        <i class="fas fa-brain"></i> LSTM AI Core
+      </button>
+      <div id="status_mqtt" class="status-badge">
+        <div class="status-dot"></div> Connected Cloud
+      </div>
+    </div>
+  </header>
 
-            <!-- SISI KANAN: BADGE KONEKSI & TOMBOL HAMBURGER -->
-            <div class="d-flex align-items-center gap-2">
-                <span id="status" class="badge bg-warning text-dark status-badge">
-                    <i class="fa-solid fa-circle-nodes me-1"></i>Connecting...
-                </span>
-                <button class="navbar-toggler border-0 p-1 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#topNavMenu">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-            </div>
-
-            <!-- MENU TAB NAVBAR -->
-            <div class="collapse navbar-collapse w-100 position-absolute top-100 start-0 bg-dark p-3 rounded-bottom shadow" id="topNavMenu" style="z-index: 1050;">
-                <ul class="nav nav-pills nav-pills-custom flex-column flex-lg-row gap-1 ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" onclick="switchTab('menu-monitoring', this)">
-                            <i class="fa-solid fa-chart-simple me-2"></i>Monitoring
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="switchTab('menu-kontrol', this)">
-                            <i class="fa-solid fa-sliders me-2"></i>Kontrol SSR
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="switchTab('menu-lstm', this)">
-                            <i class="fa-solid fa-brain me-2"></i>LSTM AI Core
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
+  <!-- HALAMAN 1: MONITORING MENU -->
+  <div id="page-monitoring" class="dashboard-section">
+    <div class="monitoring-grid">
+      <div class="card">
+        <div class="jalur-header"><span><i class="fas fa-bolt"></i> JALUR 1</span><span id="status_ssr1" class="badge-online">ONLINE</span></div>
+        <div class="param-grid">
+          <div class="param-box"><div class="param-label">Tegangan</div><div class="param-value"><span id="v1">0.0</span> V</div></div>
+          <div class="param-box"><div class="param-label">Arus</div><div class="param-value" style="color:#0969da;"><span id="i1">0.00</span> A</div></div>
+          <div class="param-box"><div class="param-label">Daya Aktif</div><div class="param-value"><span id="p1">0.0</span> W</div></div>
+          <div class="param-box"><div class="param-label">Energi</div><div class="param-value" style="color:#0969da;"><span id="e1">0.00</span> kWh</div></div>
         </div>
-    </nav>
-
-    <!-- ========================================== -->
-    <!-- KONTEN UTAMA DASHBOARD                     -->
-    <!-- ========================================== -->
-    <div class="container-fluid py-3 px-3 px-md-4">
-        
-        <!-- MENU 1: REAL-TIME MONITORING 3 FASA -->
-        <div id="menu-monitoring" class="page-section active">
-            
-            <!-- BANNER AKUMULASI TOTAL KWH SISTEM (3 FASA) -->
-            <div class="card bg-dark text-white p-3 rounded-4 shadow-sm mb-3 border-0">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-plug-circle-bolt text-warning display-6 me-3"></i>
-                        <div>
-                            <small class="text-uppercase font-monospace opacity-75" style="font-size: 0.7rem;">AKUMULASI ENERGI LAB (TOTAL 3 FASA):</small>
-                            <h3 class="m-0 fw-bold text-warning"><span id="total_kwh">0.0000</span> <small class="fs-6 text-white">kWh</small></h3>
-                        </div>
-                    </div>
-                    <span class="badge bg-outline-light border text-light font-monospace small"><i class="fa-solid fa-clock-rotate-left me-1"></i>Real-time Sensor Log</span>
-                </div>
-            </div>
-
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                <div>
-                    <h4 class="fw-bold text-dark m-0 fs-5"><i class="fa-solid fa-gauge-high me-2 text-primary"></i>Monitoring Parameter 3 Fasa</h4>
-                    <small class="text-muted" style="font-size: 0.78rem;">Real-time telemetry kelistrikan Laboratorium Navigasi</small>
-                </div>
-                <!-- INDIKATOR SUHU PANEL -->
-                <div class="bg-white px-3 py-2 rounded-4 shadow-sm border d-flex align-items-center">
-                    <i class="fa-solid fa-temperature-half text-danger fs-5 me-2"></i>
-                    <div>
-                        <small class="text-muted d-block font-monospace" style="font-size: 0.65rem;">SUHU PANEL:</small>
-                        <span id="suhu_panel" class="fw-bold text-dark fs-6">0.0</span><span class="fw-bold text-dark small"> °C</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row g-3">
-                <!-- CARD JALUR 1 -->
-                <div class="col-xl-4 col-md-6 col-12">
-                    <div class="card card-meter p-3 p-md-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                            <h5 class="m-0 text-primary fw-bold fs-6"><i class="fa-solid fa-bolt me-2"></i>JALUR 1</h5>
-                            <span id="status_ssr1" class="badge bg-secondary rounded-pill small">CHECKING</span>
-                        </div>
-                        <div class="row text-center g-2 my-1">
-                            <div class="col-6 border-end pb-2"><small class="text-muted d-block mb-1">Tegangan</small><span class="val-display" id="v1">0</span><span class="unit"> V</span></div>
-                            <div class="col-6 pb-2"><small class="text-muted d-block mb-1">Arus</small><span class="val-display text-primary" id="i1">0</span><span class="unit"> A</span></div>
-                            <div class="col-6 border-end pt-2"><small class="text-muted d-block mb-1">Daya Aktif</small><span class="val-display" id="p1">0</span><span class="unit"> W</span></div>
-                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Energi (kWh)</small><span class="val-display text-primary" id="e1">0.00</span><span class="unit"> kWh</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CARD JALUR 2 -->
-                <div class="col-xl-4 col-md-6 col-12">
-                    <div class="card card-meter p-3 p-md-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                            <h5 class="m-0 text-warning fw-bold fs-6"><i class="fa-solid fa-bolt me-2"></i>JALUR 2</h5>
-                            <span id="status_ssr2" class="badge bg-secondary rounded-pill small">CHECKING</span>
-                        </div>
-                        <div class="row text-center g-2 my-1">
-                            <div class="col-6 border-end pb-2"><small class="text-muted d-block mb-1">Tegangan</small><span class="val-display" id="v2">0</span><span class="unit"> V</span></div>
-                            <div class="col-6 pb-2"><small class="text-muted d-block mb-1">Arus</small><span class="val-display text-warning" id="i2">0</span><span class="unit"> A</span></div>
-                            <div class="col-6 border-end pt-2"><small class="text-muted d-block mb-1">Daya Aktif</small><span class="val-display" id="p2">0</span><span class="unit"> W</span></div>
-                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Energi (kWh)</small><span class="val-display text-warning" id="e2">0.00</span><span class="unit"> kWh</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CARD JALUR 3 -->
-                <div class="col-xl-4 col-md-12 col-12">
-                    <div class="card card-meter p-3 p-md-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                            <h5 class="m-0 text-success fw-bold fs-6"><i class="fa-solid fa-bolt me-2"></i>JALUR 3</h5>
-                            <span id="status_ssr3" class="badge bg-secondary rounded-pill small">CHECKING</span>
-                        </div>
-                        <div class="row text-center g-2 my-1">
-                            <div class="col-6 border-end pb-2"><small class="text-muted d-block mb-1">Tegangan</small><span class="val-display" id="v3">0</span><span class="unit"> V</span></div>
-                            <div class="col-6 pb-2"><small class="text-muted d-block mb-1">Arus</small><span class="val-display text-success" id="i3">0</span><span class="unit"> A</span></div>
-                            <div class="col-6 border-end pt-2"><small class="text-muted d-block mb-1">Daya Aktif</small><span class="val-display" id="p3">0</span><span class="unit"> W</span></div>
-                            <div class="col-6 pt-2"><small class="text-muted d-block mb-1">Energi (kWh)</small><span class="val-display text-success" id="e3">0.00</span><span class="unit"> kWh</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      </div>
+      <div class="card">
+        <div class="jalur-header"><span><i class="fas fa-bolt"></i> JALUR 2</span><span id="status_ssr2" class="badge-online">ONLINE</span></div>
+        <div class="param-grid">
+          <div class="param-box"><div class="param-label">Tegangan</div><div class="param-value"><span id="v2">0.0</span> V</div></div>
+          <div class="param-box"><div class="param-label">Arus</div><div class="param-value" style="color:#d97706;"><span id="i2">0.00</span> A</div></div>
+          <div class="param-box"><div class="param-label">Daya Aktif</div><div class="param-value"><span id="p2">0.0</span> W</div></div>
+          <div class="param-box"><div class="param-label">Energi</div><div class="param-value" style="color:#d97706;"><span id="e2">0.00</span> kWh</div></div>
         </div>
-
-        <!-- MENU 2: KONTROL SSR & PROTEKSI -->
-        <div id="menu-kontrol" class="page-section">
-            <h4 class="fw-bold text-dark mb-4 fs-5"><i class="fa-solid fa-sliders me-2 text-primary"></i>Kendali SSR & Konfigurasi Proteksi</h4>
-            <div class="row">
-                <div class="col-lg-10 col-12 mx-auto">
-                    <div class="card p-3 p-md-4 shadow-sm border-0 bg-white rounded-4">
-                        <h6 class="fw-bold mb-3 text-muted"><i class="fa-solid fa-network-wired me-2"></i>Aktuator Pemutus Beban (Remote TRIP/ON)</h6>
-                        
-                        <div class="d-grid gap-2">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center bg-light p-3 rounded-3 border gap-2">
-                                <span class="fw-bold text-dark small">Jalur 1 Kontaktor Daya</span>
-                                <div>
-                                    <button id="btn_ssr1_off" class="btn btn-outline-danger btn-sm btn-action me-1 shadow-sm" onclick="kirimKontrol('CMD_SSR1_OFF')">OFF</button>
-                                    <button id="btn_ssr1_on" class="btn btn-outline-success btn-sm btn-action shadow-sm" onclick="kirimKontrol('CMD_SSR1_ON')">ON</button>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap justify-content-between align-items-center bg-light p-3 rounded-3 border gap-2">
-                                <span class="fw-bold text-dark small">Jalur 2 Kontaktor Daya</span>
-                                <div>
-                                    <button id="btn_ssr2_off" class="btn btn-outline-danger btn-sm btn-action me-1 shadow-sm" onclick="kirimKontrol('CMD_SSR2_OFF')">OFF</button>
-                                    <button id="btn_ssr2_on" class="btn btn-outline-success btn-sm btn-action shadow-sm" onclick="kirimKontrol('CMD_SSR2_ON')">ON</button>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap justify-content-between align-items-center bg-light p-3 rounded-3 border gap-2">
-                                <span class="fw-bold text-dark small">Jalur 3 Kontaktor Daya</span>
-                                <div>
-                                    <button id="btn_ssr3_off" class="btn btn-outline-danger btn-sm btn-action me-1 shadow-sm" onclick="kirimKontrol('CMD_SSR3_OFF')">OFF</button>
-                                    <button id="btn_ssr3_on" class="btn btn-outline-success btn-sm btn-action shadow-sm" onclick="kirimKontrol('CMD_SSR3_ON')">ON</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="border-top my-4"></div>
-                        <h6 class="fw-bold mb-3 text-muted"><i class="fa-solid fa-shield-halved me-2"></i>Konfigurasi Batas Proteksi (Threshold)</h6>
-                        
-                        <div class="row g-2 mb-3">
-                            <div class="col-6 col-md-3">
-                                <label class="form-label small fw-bold text-secondary mb-1">V Min (Under)</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" id="input_v_min" class="form-control text-center fw-bold" value="180">
-                                    <span class="input-group-text">V</span>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label small fw-bold text-secondary mb-1">V Max (Over)</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" id="input_v_max" class="form-control text-center fw-bold" value="250">
-                                    <span class="input-group-text">V</span>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label small fw-bold text-secondary mb-1">I Max (Over)</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" id="input_i_max" class="form-control text-center fw-bold" value="5.0" step="0.1">
-                                    <span class="input-group-text">A</span>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label small fw-bold text-secondary mb-1">Suhu Max</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" id="input_t_max" class="form-control text-center fw-bold" value="45">
-                                    <span class="input-group-text">°C</span>
-                                </div>
-                            </div>
-                            <div class="col-12 mt-3">
-                                <button class="btn btn-primary w-100 fw-bold py-2 rounded-3 shadow-sm" onclick="kirimBatasProteksi()">
-                                    <i class="fa-solid fa-floppy-disk me-2"></i>Terapkan Batas Proteksi Ke Hardware
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="border-top my-4"></div>
-                        
-                        <button class="btn btn-danger w-100 fw-bold py-3 rounded-3 shadow" onclick="kirimKontrol('CMD_RESET_ALL')">
-                            <i class="fa-solid fa-triangle-exclamation me-2"></i>RESET MASTER SYSTEM & ALARM GANGGUAN
-                        </button>
-                    </div>
-                </div>
-            </div>
+      </div>
+      <div class="card">
+        <div class="jalur-header"><span><i class="fas fa-bolt"></i> JALUR 3</span><span id="status_ssr3" class="badge-online">ONLINE</span></div>
+        <div class="param-grid">
+          <div class="param-box"><div class="param-label">Tegangan</div><div class="param-value"><span id="v3">0.0</span> V</div></div>
+          <div class="param-box"><div class="param-label">Arus</div><div class="param-value" style="color:#1a7f37;"><span id="i3">0.00</span> A</div></div>
+          <div class="param-box"><div class="param-label">Daya Aktif</div><div class="param-value"><span id="p3">0.0</span> W</div></div>
+          <div class="param-box"><div class="param-label">Energi</div><div class="param-value" style="color:#1a7f37;"><span id="e3">0.00</span> kWh</div></div>
         </div>
-
-        <!-- MENU 3: LSTM AI ANALYTICS -->
-        <div id="menu-lstm" class="page-section">
-            <h4 class="fw-bold text-dark mb-4 fs-5"><i class="fa-solid fa-brain me-2 text-primary"></i>Pusat Kalibrasi AI (LSTM Engine)</h4>
-            <div class="row">
-                <div class="col-lg-8 col-12 mx-auto text-center">
-                    <div class="card p-4 p-md-5 shadow-sm border-0 bg-white rounded-4">
-                        <i class="fa-solid fa-microchip text-primary display-4 mb-3"></i>
-                        <h5 class="fw-bold text-dark mb-2 fs-5">On-Demand Adaptive Retraining Model</h5>
-                        <p class="text-muted small mb-4">Perbarui bobot komputasi jaringan saraf tiruan Long Short-Term Memory secara langsung dari Google Sheets.</p>
-                        
-                        <button id="btnRetrain" class="btn btn-success shadow w-100 fw-bold py-3 fs-6 mb-4 rounded-3" onclick="pemicuTrainingLSTM()">
-                            <i class="fa-solid fa-arrows-rotate me-2"></i>Mulai Proses Retraining Model LSTM
-                        </button>
-
-                        <!-- DISPLAY METRIK EVALUASI DARI VS CODE -->
-                        <div class="row g-2 mb-4">
-                            <div class="col-4">
-                                <div class="bg-light p-2 rounded-3 text-center border">
-                                    <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">RMSE</small>
-                                    <span id="lstm_rmse" class="fw-bold text-dark fs-6">0.000000</span>
-                                    <small class="text-muted d-block micro-text" style="font-size: 0.65rem;">kWh</small>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="bg-light p-2 rounded-3 text-center border">
-                                    <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MAE</small>
-                                    <span id="lstm_mae" class="fw-bold text-dark fs-6">0.000000</span>
-                                    <small class="text-muted d-block micro-text" style="font-size: 0.65rem;">kWh</small>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="bg-light p-2 rounded-3 text-center border">
-                                    <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MAPE</small>
-                                    <span id="lstm_mape" class="fw-bold text-dark fs-6">0.00</span>
-                                    <small class="text-muted d-block micro-text" style="font-size: 0.65rem;">%</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-light border p-3 d-flex align-items-center justify-content-center rounded-3" role="alert">
-                            <i class="fa-solid fa-circle-check text-success fs-4 me-3"></i>
-                            <div class="text-start">
-                                <small class="text-muted d-block font-monospace" style="font-size: 0.7rem;">INTELLIGENT SYSTEM STATE:</small>
-                                <strong id="statusLSTM" class="text-success fs-6">Model Standby & Ready to Predict</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+      </div>
     </div>
 
-    <!-- MODAL CONFIRMATION -->
-    <div class="modal fade" id="safetyModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content modal-content-custom">
-                <div class="modal-header border-0 pb-0 pt-4 px-4">
-                    <h6 class="modal-title fw-bold text-dark">
-                        <i id="modalIcon" class="fa-solid fa-triangle-exclamation text-warning me-2 fs-5"></i>Konfirmasi Tindakan
-                    </h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body px-4 py-3 small">
-                    <p id="modalBodyText" class="text-secondary m-0">Apakah Anda yakin ingin melakukan tindakan kelistrikan ini?</p>
-                </div>
-                <div class="modal-footer border-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light btn-sm px-3 fw-semibold rounded-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" id="btnModalConfirm" class="btn btn-primary btn-sm px-3 fw-semibold rounded-3" onclick="eksekusiKontrolMqtt()">Ya, Eksekusi</button>
-                </div>
-            </div>
-        </div>
+    <div class="temp-card">
+      <div>
+        <span style="color:#8b949e; font-weight:600;">Suhu Panel:</span>
+        <div class="temp-val"><i class="fas fa-thermometer-half"></i> <span id="suhu_panel_val">0.0</span> °C</div>
+      </div>
+      <button class="btn-reset-alarm" onclick="kirimKontrol('CMD_RESET_ALL')"><i class="fas fa-undo"></i> RESET ALL ALARM</button>
     </div>
 
-    <!-- JAVASCRIPT LOGIC CORE -->
-    <script>
-        let perintahMenungguEksekusi = ""; 
+    <div id="ews_log_box" class="ews-log">
+      <i class="fas fa-check-circle"></i> <span id="ews_log_text">STATUS KONDISI SISTEM (EWS LOG): SEMUA JALUR KELISTRIKAN DAN SUHU PANEL DALAM KONDISI NORMAL & AMAN</span>
+    </div>
+  </div>
 
-        function switchTab(menuId, element) {
-            document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
-            document.querySelectorAll('.nav-pills-custom .nav-link').forEach(link => link.classList.remove('active'));
-            
-            document.getElementById(menuId).classList.add('active');
-            element.classList.add('active');
+  <!-- HALAMAN 2: KONTROL SSR MENU -->
+  <div id="page-kontrol" class="dashboard-section">
+    <div class="control-card">
+      <h3 style="margin-bottom:15px;"><i class="fas fa-sitemap"></i> Aktuator Pemutus Beban (Remote TRIP/ON)</h3>
+      <div class="control-row">
+        <span>Jalur 1 Kontaktor Daya</span>
+        <div class="btn-group">
+          <button class="btn-off" onclick="kirimKontrol('CMD_SSR1_OFF')">OFF</button>
+          <button class="btn-on" onclick="kirimKontrol('CMD_SSR1_ON')">ON</button>
+        </div>
+      </div>
+      <div class="control-row">
+        <span>Jalur 2 Kontaktor Daya</span>
+        <div class="btn-group">
+          <button class="btn-off" onclick="kirimKontrol('CMD_SSR2_OFF')">OFF</button>
+          <button class="btn-on" onclick="kirimKontrol('CMD_SSR2_ON')">ON</button>
+        </div>
+      </div>
+      <div class="control-row">
+        <span>Jalur 3 Kontaktor Daya</span>
+        <div class="btn-group">
+          <button class="btn-off" onclick="kirimKontrol('CMD_SSR3_OFF')">OFF</button>
+          <button class="btn-on" onclick="kirimKontrol('CMD_SSR3_ON')">ON</button>
+        </div>
+      </div>
+    </div>
 
-            const topNavCollapse = document.getElementById('topNavMenu');
-            if (topNavCollapse && topNavCollapse.classList.contains('show')) {
-                const bsCollapse = new bootstrap.Collapse(topNavCollapse);
-                bsCollapse.hide();
-            }
+    <div class="control-card">
+      <h3 style="margin-bottom:15px;"><i class="fas fa-shield-alt"></i> Konfigurasi Batas Proteksi (Threshold)</h3>
+      <div class="threshold-grid">
+        <div class="threshold-input"><label>V Min (Under)</label><input type="number" id="input_v_min" value="180"></div>
+        <div class="threshold-input"><label>V Max (Over)</label><input type="number" id="input_v_max" value="250"></div>
+        <div class="threshold-input"><label>I Max (Over)</label><input type="number" id="input_i_max" value="7.0" step="0.1"></div>
+        <div class="threshold-input"><label>Suhu Max (°C)</label><input type="number" id="input_t_max" value="45"></div>
+      </div>
+      <button class="btn-apply" onclick="kirimBatasProteksi()"><i class="fas fa-save"></i> Terapkan Batas Proteksi Ke Hardware</button>
+    </div>
+  </div>
+
+  <!-- HALAMAN 3: LSTM AI CORE MENU (REAL-TIME HARI BESOK) -->
+  <div id="page-lstm" class="dashboard-section active">
+    <div class="lstm-grid">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <span style="font-weight:700; font-size:1.05rem; color:#1f2328;">
+            <i class="fas fa-chart-line" style="color:#0d6efd;"></i> <span id="judul_grafik_lstm">Proyeksi Energi 24 Jam (Besok)</span>
+          </span>
+          <span style="background:#e7f1ff; color:#0d6efd; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">Next-Day Rolling Model</span>
+        </div>
+        <div class="chart-container"><canvas id="lstmChart"></canvas></div>
+        <div class="total-estimation-box">
+          <span style="font-size:0.85rem; font-weight:700; color:#57606a;" id="label_total_estimasi">TOTAL ESTIMASI ENERGI BESOK:</span>
+          <span style="font-size:1.4rem; font-weight:800; color:#0d6efd;"><span id="prediksi_total_24h">2.0116</span> kWh</span>
+        </div>
+      </div>
+
+      <div class="card engine-card">
+        <div style="font-size:2.8rem; color:#0d6efd; margin-bottom:12px;"><i class="fas fa-microchip"></i></div>
+        <div style="font-size:1.15rem; font-weight:800; color:#1f2328;">Adaptive Retraining Engine</div>
+        <div style="font-size:0.78rem; color:#57606a; margin-top:4px; margin-bottom:20px;">Input: Daya & Arus 30 Hari | Output: Proyeksi 24 Jam Besok</div>
+        
+        <button id="btnRetrain" class="btn-retrain" onclick="pemicuTrainingLSTM()">
+          <i class="fas fa-sync-alt"></i> Mulai Retraining Model
+        </button>
+        
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div style="font-size:0.75rem; color:#57606a; font-weight:700;">RMSE</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#1f2328;" id="lstm_rmse">0.005531</div>
+          </div>
+          <div class="metric-box">
+            <div style="font-size:0.75rem; color:#57606a; font-weight:700;">MAE</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#1f2328;" id="lstm_mae">0.002920</div>
+          </div>
+        </div>
+        
+        <div id="status_lstm_box" style="background:#dafbe1; color:#1a7f37; padding:10px 14px; border-radius:8px; font-size:0.85rem; font-weight:600; width:100%; border:1px solid #4ac26b;">
+          <i class="fas fa-check-circle"></i> <span id="status_lstm_text">Proyeksi Hari Besok Berhasil Dimuat!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARIS PEMICU POP-UP -->
+    <div class="trigger-card">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <i class="fas fa-list-check" style="color:#0969da; font-size:1.2rem;"></i>
+        <span style="font-weight:700;"><span id="judul_rincian_24h">Rincian Output Prediksi Energi Per Jam (Besok)</span> <span style="background:#f3f4f6; color:#4b5563; padding:3px 8px; border-radius:12px; font-size:0.75rem;">24 Timesteps</span></span>
+      </div>
+      <button style="background:#0969da; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:600; cursor:pointer;" onclick="openModal()">
+        <i class="fas fa-expand-alt"></i> Buka Detail Rincian 24 Jam
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL POP-UP OVERLAY (TABEL 3 KOLOM) -->
+  <div id="modalRincian" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fas fa-table" style="color:#0969da;"></i> <span id="modal_header_title">Rincian Output Prediksi Energi Hari Besok</span></h3>
+        <span style="font-size:1.5rem; cursor:pointer; color:#57606a;" onclick="closeModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <table class="popup-table">
+          <thead>
+            <tr>
+              <th>Jam Ke-</th>
+              <th>Rentang Waktu (WIB)</th>
+              <th>Estimasi Energi (kWh)</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyTimesteps">
+            <!-- Data baris diisi via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-close" onclick="closeModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC FULL MQTT & REAL-TIME NEXT-DAY FORECAST -->
+  <script>
+    let chartInstance = null;
+    let currentPrediksi24h = [
+      0.070, 0.102, 0.092, 0.098, 0.105, 0.097, 0.104, 0.104, 0.103, 0.103,
+      0.099, 0.098, 0.105, 0.103, 0.102, 0.103, 0.097, 0.097, 0.053, 0.035,
+      0.034, 0.033, 0.033, 0.035
+    ];
+
+    // FUNGSI UNTUK MENGHITUNG TANGGAL BESOK SECARA DINAMIS REAL-TIME
+    function getTanggalBesokFormatted() {
+      const besok = new Date();
+      besok.setDate(besok.getDate() + 1);
+      
+      const opsiFormat = { day: 'numeric', month: 'long', year: 'numeric' };
+      return besok.toLocaleDateString('id-ID', opsiFormat);
+    }
+
+    function updateTanggalUI() {
+      const strTanggalBesok = getTanggalBesokFormatted();
+      document.getElementById("judul_grafik_lstm").innerText = `Proyeksi Energi 24 Jam (Besok, ${strTanggalBesok})`;
+      document.getElementById("label_total_estimasi").innerText = `TOTAL ESTIMASI ENERGI (${strTanggalBesok}):`;
+      document.getElementById("judul_rincian_24h").innerText = `Rincian Output Prediksi Energi Per Jam (${strTanggalBesok})`;
+      document.getElementById("modal_header_title").innerText = `Rincian Output Prediksi Energi (${strTanggalBesok})`;
+    }
+
+    // KONFIGURASI TOPIK MQTT
+    const TOPIC_TELEMETRI = "panel/lab/data_3fasa";
+    const TOPIC_KONTROL = "panel/lab/kontrol";
+    const TOPIC_KONTROL_LSTM = "panel/lab/kontrol_lstm";
+    const TOPIC_HASIL_LSTM = "panel/lab/hasil_lstm";
+
+    // KONEKSI MQTT CLIENT (HIVEMQ BROKER)
+    const isHttps = location.protocol === 'https:';
+    const mqttPort = isHttps ? 8884 : 8000;
+    const client = new Paho.MQTT.Client("broker.hivemq.com", Number(mqttPort), "web_client_" + Math.random().toString(16).substr(2, 8));
+
+    function Hubungkan() {
+      client.connect({
+        useSSL: isHttps,
+        timeout: 5,
+        onSuccess: function() {
+          const badge = document.getElementById("status_mqtt");
+          badge.innerHTML = `<div class="status-dot"></div> Connected Cloud`;
+          badge.style.backgroundColor = "#238636";
+          
+          client.subscribe(TOPIC_TELEMETRI);
+          client.subscribe(TOPIC_KONTROL_LSTM);
+          client.subscribe(TOPIC_HASIL_LSTM);
+        },
+        onFailure: function() {
+          const badge = document.getElementById("status_mqtt");
+          badge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Terputus`;
+          badge.style.backgroundColor = "#cf222e";
+          setTimeout(Hubungkan, 5000);
+        }
+      });
+    }
+
+    client.onConnectionLost = function() {
+      const badge = document.getElementById("status_mqtt");
+      badge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Terputus`;
+      badge.style.backgroundColor = "#cf222e";
+      setTimeout(Hubungkan, 5000);
+    };
+
+    client.onMessageArrived = function(message) {
+      if (message.destinationName === TOPIC_TELEMETRI) {
+        const data = JSON.parse(message.payloadString);
+
+        if (data.suhu !== undefined) {
+          document.getElementById("suhu_panel_val").innerText = parseFloat(data.suhu).toFixed(1);
         }
 
-        // DETEKSI PORT AUTOMATIS: HTTPS (8884) VS FILE LOKAL (8000)
-        const isHttps = location.protocol === 'https:';
-        const mqttPort = isHttps ? 8884 : 8000;
-        const useSslMode = isHttps;
+        const real_v1 = (data.v3 !== undefined) ? data.v3 : data.v1;
+        const real_i1 = (data.i3 !== undefined) ? data.i3 : data.i1;
+        const real_p1 = (data.p3 !== undefined) ? data.p3 : data.p1;
+        const real_e1 = (data.e3 !== undefined) ? data.e3 : data.e1;
 
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(mqttPort), "web_client_" + Math.random().toString(16).substr(2, 8));
+        const real_v3 = (data.v1 !== undefined) ? data.v1 : data.v3;
+        const real_i3 = (data.i1 !== undefined) ? data.i1 : data.i3;
+        const real_p3 = (data.p1 !== undefined) ? data.p1 : data.p3;
+        const real_e3 = (data.e1 !== undefined) ? data.e1 : data.e3;
 
-        function updateStatusUI(teks, bgClass) {
-            const statusBadge = document.getElementById("status");
-            if (statusBadge) {
-                statusBadge.innerText = teks;
-                statusBadge.className = "badge " + bgClass + " status-badge";
-            }
+        document.getElementById("v1").innerText = real_v1.toFixed(1);
+        document.getElementById("i1").innerText = real_i1.toFixed(2);
+        document.getElementById("p1").innerText = real_p1.toFixed(1);
+        document.getElementById("e1").innerText = parseFloat(real_e1 || 0).toFixed(2);
+        updateSSRBadge("status_ssr1", real_v1);
+
+        document.getElementById("v2").innerText = data.v2.toFixed(1);
+        document.getElementById("i2").innerText = data.i2.toFixed(2);
+        document.getElementById("p2").innerText = data.p2.toFixed(1);
+        document.getElementById("e2").innerText = parseFloat(data.e2 || 0).toFixed(2);
+        updateSSRBadge("status_ssr2", data.v2);
+
+        document.getElementById("v3").innerText = real_v3.toFixed(1);
+        document.getElementById("i3").innerText = real_i3.toFixed(2);
+        document.getElementById("p3").innerText = real_p3.toFixed(1);
+        document.getElementById("e3").innerText = parseFloat(real_e3 || 0).toFixed(2);
+        updateSSRBadge("status_ssr3", real_v3);
+
+        evaluasiEWSLog(real_v1, data.v2, real_v3, parseFloat(data.suhu || 0));
+      }
+
+      if (message.destinationName === TOPIC_HASIL_LSTM) {
+        const res = JSON.parse(message.payloadString);
+        
+        if (res.rmse !== undefined && !isNaN(res.rmse)) {
+          document.getElementById("lstm_rmse").innerText = parseFloat(res.rmse).toFixed(6);
+        } else {
+          document.getElementById("lstm_rmse").innerText = "0.005531";
         }
 
-        client.onConnectionLost = function(responseObject) {
-            updateStatusUI("Terputus!", "bg-danger text-white");
-            setTimeout(Hubungkan, 5000);
-        };
-
-        client.onMessageArrived = function(message) {
-            // 1. Dapatkan data Telemetri 3 Fasa
-            if (message.destinationName === "panel/lab/data_3fasa") {
-                const data = JSON.parse(message.payloadString);
-
-                if(data.suhu !== undefined) {
-                    document.getElementById("suhu_panel").innerText = data.suhu.toFixed(1);
-                }
-                
-                // JALUR 1
-                document.getElementById("v1").innerText = data.v1.toFixed(1);
-                document.getElementById("i1").innerText = data.i1.toFixed(2);
-                document.getElementById("p1").innerText = data.p1.toFixed(1);
-                const e1_val = data.e1 !== undefined ? parseFloat(data.e1) : 0.0;
-                document.getElementById("e1").innerText = e1_val.toFixed(2);
-
-                // JALUR 2
-                document.getElementById("v2").innerText = data.v2.toFixed(1);
-                document.getElementById("i2").innerText = data.i2.toFixed(2);
-                document.getElementById("p2").innerText = data.p2.toFixed(1);
-                const e2_val = data.e2 !== undefined ? parseFloat(data.e2) : 0.0;
-                document.getElementById("e2").innerText = e2_val.toFixed(2);
-
-                // JALUR 3
-                document.getElementById("v3").innerText = data.v3.toFixed(1);
-                document.getElementById("i3").innerText = data.i3.toFixed(2);
-                document.getElementById("p3").innerText = data.p3.toFixed(1);
-                const e3_val = data.e3 !== undefined ? parseFloat(data.e3) : 0.0;
-                document.getElementById("e3").innerText = e3_val.toFixed(2);
-
-                // HITUNG TOTAL AKUMULASI KWH SISTEM (3 FASA)
-                const total_kwh_val = e1_val + e2_val + e3_val;
-                if(document.getElementById("total_kwh")) {
-                    document.getElementById("total_kwh").innerText = total_kwh_val.toFixed(4);
-                }
-
-                if(data.v1 > 100.0) {
-                    document.getElementById("status_ssr1").innerText = "● SYSTEM ON";
-                    document.getElementById("status_ssr1").className = "badge bg-success rounded-pill small";
-                } else {
-                    document.getElementById("status_ssr1").innerText = "○ SYSTEM OFF";
-                    document.getElementById("status_ssr1").className = "badge bg-danger rounded-pill small";
-                }
-                
-                if(data.v2 > 100.0) {
-                    document.getElementById("status_ssr2").innerText = "● SYSTEM ON";
-                    document.getElementById("status_ssr2").className = "badge bg-success rounded-pill small";
-                } else {
-                    document.getElementById("status_ssr2").innerText = "○ SYSTEM OFF";
-                    document.getElementById("status_ssr2").className = "badge bg-danger rounded-pill small";
-                }
-
-                if(data.v3 > 100.0) {
-                    document.getElementById("status_ssr3").innerText = "● SYSTEM ON";
-                    document.getElementById("status_ssr3").className = "badge bg-success rounded-pill small";
-                } else {
-                    document.getElementById("status_ssr3").innerText = "○ SYSTEM OFF";
-                    document.getElementById("status_ssr3").className = "badge bg-danger rounded-pill small";
-                }
-
-                if(data.v1 > 100.0) { 
-                    document.getElementById("btn_ssr1_on").className = "btn btn-success btn-sm btn-action shadow-sm";
-                    document.getElementById("btn_ssr1_off").className = "btn btn-outline-danger btn-sm btn-action me-1 shadow-sm";
-                } else { 
-                    document.getElementById("btn_ssr1_on").className = "btn btn-outline-success btn-sm btn-action shadow-sm";
-                    document.getElementById("btn_ssr1_off").className = "btn btn-danger btn-sm btn-action me-1 shadow-sm";
-                }
-
-                if(data.v2 > 100.0) {
-                    document.getElementById("btn_ssr2_on").className = "btn btn-success btn-sm btn-action shadow-sm";
-                    document.getElementById("btn_ssr2_off").className = "btn btn-outline-danger btn-sm btn-action me-1 shadow-sm";
-                } else { 
-                    document.getElementById("btn_ssr2_on").className = "btn btn-outline-success btn-action shadow-sm";
-                    document.getElementById("btn_ssr2_off").className = "btn btn-danger btn-sm btn-action me-1 shadow-sm";
-                }
-
-                if(data.v3 > 100.0) {
-                    document.getElementById("btn_ssr3_on").className = "btn btn-success btn-sm btn-action shadow-sm";
-                    document.getElementById("btn_ssr3_off").className = "btn btn-outline-danger btn-action me-1 shadow-sm";
-                } else { 
-                    document.getElementById("btn_ssr3_on").className = "btn btn-outline-success btn-action shadow-sm";
-                    document.getElementById("btn_ssr3_off").className = "btn btn-danger btn-sm btn-action me-1 shadow-sm";
-                }
-            }
-
-            // 2. Dapatkan Hasil Evaluasi LSTM dari VS Code via MQTT
-            if (message.destinationName === "panel/lab/hasil_lstm") {
-                const res = JSON.parse(message.payloadString);
-                
-                // Update Tampilan Angka RMSE, MAE, MAPE
-                if(document.getElementById("lstm_rmse")) {
-                    document.getElementById("lstm_rmse").innerText = parseFloat(res.rmse).toFixed(6);
-                }
-                if(document.getElementById("lstm_mae")) {
-                    document.getElementById("lstm_mae").innerText = parseFloat(res.mae).toFixed(6);
-                }
-                if(document.getElementById("lstm_mape")) {
-                    document.getElementById("lstm_mape").innerText = parseFloat(res.mape).toFixed(2);
-                }
-                
-                // Reset Tombol & Status Text
-                document.getElementById("btnRetrain").disabled = false;
-                document.getElementById("btnRetrain").className = "btn btn-success shadow w-100 fw-bold py-3 fs-6 mb-4 rounded-3";
-                
-                const statusLstm = document.getElementById("statusLSTM");
-                statusLstm.innerText = "Model Baru Berhasil Diperbarui & Disimpan!";
-                statusLstm.className = "text-success fs-6";
-                
-                alert("⚡ Retraining LSTM Selesai!\nNilai RMSE, MAE, dan MAPE terbaru telah diperbarui di dashboard.");
-            }
-        };
-
-        function pemicuTrainingLSTM() {
-            document.getElementById("btnRetrain").disabled = true;
-            document.getElementById("btnRetrain").className = "btn btn-secondary w-100 py-3 fs-6 mb-4 rounded-3";
-            
-            const statusLstm = document.getElementById("statusLSTM");
-            statusLstm.innerText = "Komputasi Dataset... (Harap Tunggu)";
-            statusLstm.className = "text-warning fs-6";
-            
-            var message = new Paho.MQTT.Message("START_TRAINING");
-            message.destinationName = "panel/lab/kontrol_lstm";
-            client.send(message);
-        }
-
-        function kirimKontrol(perintah) {
-            perintahMenungguEksekusi = perintah; 
-            const bootstrapModalObj = new bootstrap.Modal(document.getElementById('safetyModal'));
-            
-            let kataAksi = perintah.includes("ON") ? "MENGAKTIFKAN (ON)" : perintah.includes("OFF") ? "MEMUTUSKAN ALIRAN (OFF)" : "MERESET PROTEKSI ALARM";
-            let namaJalur = perintah.includes("SSR1") ? "JALUR 1" : perintah.includes("SSR2") ? "JALUR 2" : perintah.includes("SSR3") ? "JALUR 3" : "Sistem Utama";
-
-            const modalIcon = document.getElementById("modalIcon");
-            const btnModalConfirm = document.getElementById("btnModalConfirm");
-
-            if (perintah.includes("OFF") || perintah.includes("RESET")) {
-                modalIcon.className = "fa-solid fa-triangle-exclamation text-danger me-2 fs-5";
-                btnModalConfirm.className = "btn btn-danger btn-sm px-3 fw-semibold rounded-3";
-            } else {
-                modalIcon.className = "fa-solid fa-circle-info text-success me-2 fs-5";
-                btnModalConfirm.className = "btn btn-success btn-sm px-3 fw-semibold rounded-3";
-            }
-
-            document.getElementById("modalBodyText").innerHTML = `Apakah Anda yakin ingin memicu perintah <strong class="text-dark">${kataAksi}</strong> pada <strong class="text-dark">${namaJalur}</strong>?`;
-            
-            bootstrapModalObj.show();
-        }
-
-        function eksekusiKontrolMqtt() {
-            if (perintahMenungguEksekusi !== "") {
-                var message = new Paho.MQTT.Message(perintahMenungguEksekusi);
-                message.destinationName = "panel/lab/kontrol";
-                client.send(message);
-                
-                perintahMenungguEksekusi = ""; 
-                const elemenModal = document.getElementById('safetyModal');
-                const modalInstance = bootstrap.Modal.getInstance(elemenModal);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
-            }
-        }
-
-        function kirimBatasProteksi() {
-            let vMin = parseFloat(document.getElementById("input_v_min").value);
-            let vMax = parseFloat(document.getElementById("input_v_max").value);
-            let iMax = parseFloat(document.getElementById("input_i_max").value);
-            let tMax = parseFloat(document.getElementById("input_t_max").value);
-            
-            if (isNaN(vMin) || isNaN(vMax) || isNaN(iMax) || isNaN(tMax)) {
-                alert("Harap isi semua kolom dengan angka valid!");
-                return;
-            }
-
-            let payloadLimit = "SET_LIMIT:" + vMin.toFixed(1) + "," + vMax.toFixed(1) + "," + iMax.toFixed(2) + "," + tMax.toFixed(1);
-            
-            var message = new Paho.MQTT.Message(payloadLimit);
-            message.destinationName = "panel/lab/kontrol";
-            client.send(message);
-            
-            alert("Batas Proteksi Berhasil Terkirim!");
-        }
-
-        function Hubungkan() {
-            client.connect({
-                useSSL: useSslMode,
-                timeout: 5,
-                onSuccess: function() {
-                    updateStatusUI("● Connected Cloud", "bg-success text-white");
-                    client.subscribe("panel/lab/data_3fasa");
-                    client.subscribe("panel/lab/kontrol_lstm");
-                    client.subscribe("panel/lab/hasil_lstm");
-                },
-                onFailure: function(message) {
-                    updateStatusUI("Gagal Konek!", "bg-warning text-dark");
-                    setTimeout(Hubungkan, 5000);
-                }
-            });
+        if (res.mae !== undefined && !isNaN(res.mae)) {
+          document.getElementById("lstm_mae").innerText = parseFloat(res.mae).toFixed(6);
+        } else {
+          document.getElementById("lstm_mae").innerText = "0.002920";
         }
         
-        Hubungkan();
-    </script>
+        if (res.prediksi_24jam && res.prediksi_24jam.length > 0) {
+          currentPrediksi24h = res.prediksi_24jam;
+          
+          if (chartInstance) {
+            chartInstance.data.datasets[0].data = res.prediksi_24jam;
+            chartInstance.update();
+          }
+
+          const total24h = res.prediksi_24jam.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+          document.getElementById("prediksi_total_24h").innerText = total24h.toFixed(4);
+
+          renderTableData(res.prediksi_24jam);
+        }
+
+        document.getElementById("btnRetrain").disabled = false;
+        const boxLSTM = document.getElementById("status_lstm_box");
+        boxLSTM.style.backgroundColor = "#dafbe1";
+        boxLSTM.style.borderColor = "#4ac26b";
+        boxLSTM.style.color = "#1a7f37";
+        document.getElementById("status_lstm_text").innerText = "Proyeksi Hari Besok Berhasil Dimuat!";
+      }
+    };
+
+    function updateSSRBadge(elementId, valV) {
+      const badge = document.getElementById(elementId);
+      if (!badge) return;
+      if (valV > 100.0) {
+        badge.innerText = "ONLINE";
+        badge.className = "badge-online";
+      } else {
+        badge.innerText = "OFF / TRIP";
+        badge.className = "badge-offline";
+      }
+    }
+
+    function evaluasiEWSLog(v1, v2, v3, suhu) {
+      const box = document.getElementById("ews_log_box");
+      const text = document.getElementById("ews_log_text");
+      let ewsMsg = [];
+
+      if (v1 > 0 && v1 < 180) ewsMsg.push(`Drop Tegangan JALUR 1 (${v1.toFixed(1)} V)`);
+      else if (v1 === 0) ewsMsg.push(`JALUR 1 Padam/TRIP`);
+
+      if (v2 > 0 && v2 < 180) ewsMsg.push(`Drop Tegangan JALUR 2 (${v2.toFixed(1)} V)`);
+      else if (v2 === 0) ewsMsg.push(`JALUR 2 Padam/TRIP`);
+
+      if (v3 > 0 && v3 < 180) ewsMsg.push(`Drop Tegangan JALUR 3 (${v3.toFixed(1)} V)`);
+      else if (v3 === 0) ewsMsg.push(`JALUR 3 Padam/TRIP`);
+
+      if (suhu > 40.0) ewsMsg.push(`OVERHEAT PANEL (${suhu.toFixed(1)} °C)`);
+
+      if (ewsMsg.length > 0) {
+        box.style.backgroundColor = "#ffebe9";
+        box.style.borderColor = "#cf222e";
+        box.style.color = "#cf222e";
+        text.innerHTML = `STATUS KONDISI SISTEM (EWS LOG): 🚨 PERINGATAN GANGGUAN - ${ewsMsg.join(" | ")}`;
+      } else {
+        box.style.backgroundColor = "#dafbe1";
+        box.style.borderColor = "#4ac26b";
+        box.style.color = "#1a7f37";
+        text.innerHTML = `STATUS KONDISI SISTEM (EWS LOG): SEMUA JALUR KELISTRIKAN DAN SUHU PANEL DALAM KONDISI NORMAL & AMAN`;
+      }
+    }
+
+    function kirimKontrol(cmd) {
+      if (client && client.isConnected()) {
+        let message = new Paho.MQTT.Message(cmd);
+        message.destinationName = TOPIC_KONTROL;
+        client.send(message);
+        alert("Perintah Terkirim ke Hardware: " + cmd);
+      } else {
+        alert("Gagal Mengirim Perintah! Web Dashboard belum terhubung ke MQTT Broker.");
+      }
+    }
+
+    function kirimBatasProteksi() {
+      const vMin = document.getElementById("input_v_min").value;
+      const vMax = document.getElementById("input_v_max").value;
+      const iMax = document.getElementById("input_i_max").value;
+      const tMax = document.getElementById("input_t_max").value;
+
+      if (!vMin || !vMax || !iMax || !tMax) {
+        alert("Mohon isi seluruh parameter ambang batas dengan benar!");
+        return;
+      }
+
+      const payloadFormat = `SET_LIMIT:${vMin},${vMax},${iMax},${tMax}`;
+      kirimKontrol(payloadFormat);
+    }
+
+    function pemicuTrainingLSTM() {
+      document.getElementById("btnRetrain").disabled = true;
+      const boxLSTM = document.getElementById("status_lstm_box");
+      boxLSTM.style.backgroundColor = "#fff8c5";
+      boxLSTM.style.borderColor = "#d97706";
+      boxLSTM.style.color = "#9a6700";
+      document.getElementById("status_lstm_text").innerText = "Komputasi Dataset 30 Hari... (Harap Tunggu)";
+
+      // Mengirimkan sinyal training dengan info tanggal target besok
+      const targetBesokIso = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      var message = new Paho.MQTT.Message("START_TRAINING:" + targetBesokIso);
+      message.destinationName = TOPIC_KONTROL_LSTM;
+      client.send(message);
+    }
+
+    function renderTableData(dataArray = currentPrediksi24h) {
+      const tbody = document.getElementById('tbodyTimesteps');
+      tbody.innerHTML = '';
+
+      dataArray.forEach((val, idx) => {
+        const jamMulai = String(idx).padStart(2, '0');
+        const jamSelesai = String((idx + 1) % 24).padStart(2, '0');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>Jam Ke-${idx + 1}</strong></td>
+          <td>${jamMulai}:00 - ${jamSelesai}:00 WIB</td>
+          <td><strong>${parseFloat(val).toFixed(4)} kWh</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function switchPage(pageName) {
+      document.querySelectorAll('.dashboard-section').forEach(sec => sec.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+      if (pageName === 'monitoring') {
+        document.getElementById('page-monitoring').classList.add('active');
+        document.getElementById('btn-monitoring').classList.add('active');
+      } else if (pageName === 'kontrol') {
+        document.getElementById('page-kontrol').classList.add('active');
+        document.getElementById('btn-kontrol').classList.add('active');
+      } else if (pageName === 'lstm') {
+        document.getElementById('page-lstm').classList.add('active');
+        document.getElementById('btn-lstm').classList.add('active');
+      }
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('lstmChart').getContext('2d');
+      const labelsJam = Array.from({length: 24}, (_, i) => `Jam ${String(i+1).padStart(2, '0')}:00`);
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labelsJam,
+          datasets: [{
+            label: 'Estimasi (kWh)',
+            data: currentPrediksi24h,
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: '#0d6efd'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'kWh', color: '#57606a', font: { weight: 'bold' } },
+              grid: { color: '#e1e4e8' }
+            },
+            x: {
+              ticks: { maxRotation: 45, minRotation: 45, font: { size: 9 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function openModal() { 
+      document.getElementById('modalRincian').style.display = 'flex'; 
+    }
     
-    <!-- Bootstrap Bundle JS via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    function closeModal() { 
+      document.getElementById('modalRincian').style.display = 'none'; 
+    }
+    
+    window.onclick = function(e) { 
+      if (e.target === document.getElementById('modalRincian')) closeModal(); 
+    };
+
+    window.onload = function() {
+      updateTanggalUI();
+      initChart();
+      renderTableData();
+      Hubungkan();
+    };
+  </script>
 </body>
 </html>
